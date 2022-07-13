@@ -17,7 +17,7 @@ public class AccountDAO {
             return Account.builder()
                     .username(scanner.next())
                     .accountCurrency(Currency.getInstance(scanner.next()))
-                    .balance(BigDecimal.valueOf(Double.parseDouble(scanner.next())))
+                    .balance(new BigDecimal(scanner.next()))
                     .otherSupportedCurrencies(scanner.tokens().map(Currency::getInstance).toList())
                     .build();
         } catch (FileNotFoundException e) {
