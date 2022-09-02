@@ -2,6 +2,8 @@ package org.vitaliyyats.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -20,22 +22,29 @@ public class FixerCurrencyExchanger implements CurrencyExchanger {
 
     private static final String FIXER_URI = "http://data.fixer.io/api/";
 
+    private static final Logger log = LogManager.getLogger();
+
     @Override
     public BigDecimal convert(BigDecimal value, Currency source, Currency target) throws URISyntaxException, IOException, InterruptedException {
+        if (source.equals(target)) {
+            return value;
+        }
 
         FixerResponse fixerResponse = callFixerService(source, target);
-
-        BigDecimal rate;
+        
         BigDecimal result;
         if (fixerResponse.getBase().equals(source.getCurrencyCode())) {
-            rate = fixerResponse.getRates().get(target.getCurrencyCode());
+            var rate = fixerResponse.getRates().get(target.getCurrencyCode());
             result = value.multiply(rate);
         } else {
-            rate = fixerResponse.getRates().get(source.getCurrencyCode());
-            result = value.setScale(2).divide(rate, RoundingMode.HALF_UP);
+            var rateToBaseFromSource = fixerResponse.getRates().get(source.getCurrencyCode());
+            var rateFromBaseToTarget = fixerResponse.getRates().get(target.getCurrencyCode());
+            result = value.setScale(2, RoundingMode.HALF_UP)
+                    .divide(rateToBaseFromSource, RoundingMode.HALF_UP)
+                    .multiply(rateFromBaseToTarget);
         }
-        result.setScale(2, RoundingMode.HALF_UP);
-        //log.info("Converted {} {} to {} {}", value, source.getCurrencyCode(), result, target.getCurrencyCode());
+        result = result.setScale(2, RoundingMode.HALF_UP);
+        log.info("Converted {} {} to {} {}", value, source.getCurrencyCode(), result, target.getCurrencyCode());
         return result;
     }
 
@@ -49,7 +58,6 @@ public class FixerCurrencyExchanger implements CurrencyExchanger {
                 .build();
 
         HttpResponse<String> response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-        //log.info("Calling external service...");
         return convertToFixerResp(response.body());
     }
 

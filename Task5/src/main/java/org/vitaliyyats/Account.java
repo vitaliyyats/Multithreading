@@ -7,6 +7,7 @@ import java.util.Currency;
 import java.util.List;
 
 @Getter
+@Setter
 @Builder
 @ToString
 public class Account {
